@@ -8,18 +8,18 @@ def DEBUG(*args, **kwargs):
     if ENABLE_DEBUGGING:
         print(*args, **kwargs)
 
-class PyAT(object):
+class AT_Command_Exception(Exception):
+    pass
 
-    class AT_Command_Exception(Exception):
-        """docstring for AT_Command_Exception"""
-        def __init__(self):
-            super(AT_Command_Exception, self).__init__()
-            
+class AT_Command_Error(AT_Command_Exception):
+    pass
+
+class PyAT(object):    
 
     def __init__(self, port):
         super(PyAT, self).__init__()
         self.port = port
-        self.ser = serial.Serial(self.port, timeout=0.5)
+        self.ser = serial.Serial(self.port, timeout=5)
         self.registration_status_mode_set=False
 
     def close(self):
@@ -42,9 +42,9 @@ class PyAT(object):
             elif resp.startswith('OK'):
                 DEBUG('command executed sucessfully')
                 return regex_match_result
-            elif resp.startswith('ERROR'):
+            elif resp.startswith('ERROR') or resp.startswith('+CME ERROR:'):
                 DEBUG('ERROR EXCECUTING COMMAND')
-                raise AT_Command_Exception('Error sending command "%s": "%s"' % (cmd, resp))
+                raise AT_Command_Error('Error sending command "%s": "%s"' % (cmd, resp))
             elif resp == '':
                 pass
             else:
@@ -58,7 +58,7 @@ class PyAT(object):
         elif 0 <= csq_dbm_value and csq_dbm_value <= 31:
             return -113 + 2 * csq_dbm_value
         else:
-            return ValueError('invalid csq_dbm_value')
+            raise ValueError('invalid csq_dbm_value')
 
     SIGNAL_RANGE_MARGINAL = 0
     SIGNAL_RANGE_OK = 1
@@ -72,7 +72,11 @@ class PyAT(object):
     }
     @classmethod
     def dbm_to_range(cls, dbm):
-        if dbm < -93:
+        if dbm is None:
+            raise ValueError('dbm may not be none')
+        elif type(dbm) is not int or type(dbm) is not float:
+            raise TypeError('dbm has invalid type')
+        elif dbm < -93:
             return cls.SIGNAL_RANGE_MARGINAL
         elif -93 <= dbm and dbm < -83:
             return cls.SIGNAL_RANGE_OK
@@ -81,7 +85,7 @@ class PyAT(object):
         elif -73 <= dbm and dbm < -51:
             return cls.SIGNAL_RANGE_EXCELLENT
         else:
-            return None
+            raise ValueError('invalid dbm value')
 
 
     def get_signal_quality(self):
@@ -130,8 +134,8 @@ class PyAT(object):
                 'stat': int(resp.group('stat')),
                 'lac': resp.group('lac'),
                 'lac': resp.group('ci'),
-                'act': int(resp.group('act')),
-                'act_name': self.ACCESS_TECHNOLOGY[int(resp.group('act'))]
+                'act': int(resp.group('act')) if resp.group('act') is not None else None,
+                'act_name': self.ACCESS_TECHNOLOGY[int(resp.group('act'))] if resp.group('act') is not None else None,
             }
         else:
             raise self.AT_Command_Exception("ERROR no value returned")
@@ -146,10 +150,10 @@ class PyAT(object):
         if resp is not None:
             return {
                 'mode': int(resp.group('mode')),
-                'format': int(resp.group('format')),
+                'format': int(resp.group('format')) if resp.group('format') is not None else None,
                 'operator': resp.group('oper'),
-                'act': int(resp.group('act')),
-                'act_name': self.ACCESS_TECHNOLOGY[int(resp.group('act'))]
+                'act': int(resp.group('act')) if resp.group('act') is not None else None,
+                'act_name': self.ACCESS_TECHNOLOGY[int(resp.group('act'))] if resp.group('act') is not None else None,
             }
         else:
             raise self.AT_Command_Exception("ERROR no value returned")
@@ -191,9 +195,8 @@ class PyAT(object):
 
 
 if __name__ == "__main__":
-
+    ENABLE_DEBUGGING=True
     modem = PyAT('/dev/sierra_internal_AT')
-
     rssi = modem.get_signal_quality()
     print("current rssi %d (%s)" % (rssi, PyAT.SIGNAL_RANGE[PyAT.dbm_to_range(rssi)]))
     print("registration status %r" % modem.get_registration_status())
