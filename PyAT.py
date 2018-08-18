@@ -74,7 +74,7 @@ class PyAT(object):
     def dbm_to_range(cls, dbm):
         if dbm is None:
             raise ValueError('dbm may not be none')
-        elif type(dbm) is not int or type(dbm) is not float:
+        elif type(dbm) is not int and type(dbm) is not float:
             raise TypeError('dbm has invalid type')
         elif dbm < -93:
             return cls.SIGNAL_RANGE_MARGINAL
