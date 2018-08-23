@@ -133,7 +133,7 @@ class PyAT(object):
                 'type': int(resp.group('type')),
                 'stat': int(resp.group('stat')),
                 'lac': resp.group('lac'),
-                'lac': resp.group('ci'),
+                'ci': resp.group('ci'),
                 'act': int(resp.group('act')) if resp.group('act') is not None else None,
                 'act_name': self.ACCESS_TECHNOLOGY[int(resp.group('act'))] if resp.group('act') is not None else None,
             }
