@@ -82,10 +82,10 @@ class PyAT(object):
             return cls.SIGNAL_RANGE_OK
         elif -83 <= dbm and dbm < -73:
             return cls.SIGNAL_RANGE_GOOD
-        elif -73 <= dbm and dbm < -51:
+        elif -73 <= dbm:
             return cls.SIGNAL_RANGE_EXCELLENT
         else:
-            raise ValueError('invalid dbm value')
+            raise ValueError('invalid dbm value %d' % dbm)
 
 
     def get_signal_quality(self):
